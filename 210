@@ -1,33 +1,49 @@
-int sensor_pin = A0;
-int output_value;
-int pump = 8;
-int threshold = 5;
+#define MOISTURE_SENSOR A0
+#define PUMP_PIN 8
+
+const int dryThreshold = 5;        // Moisture percentage threshold
+const int pumpDuration = 1000;     // Pump ON time in milliseconds
 
 void setup() {
   Serial.begin(9600);
-  pinMode(sensor_pin, INPUT);
-  pinMode(pump, OUTPUT);
-  digitalWrite(pump, LOW);
-  Serial.println("Reading From the Sensor ...");
+  pinMode(MOISTURE_SENSOR, INPUT);
+  pinMode(PUMP_PIN, OUTPUT);
+  digitalWrite(PUMP_PIN, LOW);
+
+  Serial.println("Plant Monitoring System Initialized");
   delay(1000);
 }
 
 void loop() {
-  output_value = analogRead(sensor_pin);
-  output_value = map(output_value, 550, 0, 0, 100);
-  Serial.print("Moisture: ");
-  Serial.print(output_value);
+  int moistureLevel = getMoisturePercentage();
+  Serial.print("Soil Moisture: ");
+  Serial.print(moistureLevel);
   Serial.println("%");
 
-  if (output_value < threshold) {
-    digitalWrite(pump, HIGH);
-    Serial.println("Pump ON for 1 second");
-    delay(1000);
-    digitalWrite(pump, LOW);
-    Serial.println("Pump OFF");
+  if (moistureLevel < dryThreshold) {
+    runPump();
   } else {
-    digitalWrite(pump, LOW);
-    Serial.println("Soil is moist. Pump not needed.");
+    Serial.println("Moisture adequate. Pump is OFF.");
+    digitalWrite(PUMP_PIN, LOW);
   }
+
   delay(1000);
+}
+
+int getMoisturePercentage() {
+  int rawValue = analogRead(MOISTURE_SENSOR);
+  int percent = customMap(rawValue, 550, 0, 0, 100);
+  return constrain(percent, 0, 100);
+}
+
+int customMap(int value, int inMin, int inMax, int outMin, int outMax) {
+  return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+}
+
+void runPump() {
+  Serial.println("Soil dry. Activating pump...");
+  digitalWrite(PUMP_PIN, HIGH);
+  delay(pumpDuration);
+  digitalWrite(PUMP_PIN, LOW);
+  Serial.println("Pump OFF.");
 }
